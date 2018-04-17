@@ -48,10 +48,7 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err er
 	}
 
 	// Extract custom claims.
-	var claims struct {
-		Email    string `json:"email"`
-		Verified *bool  `json:"email_verified"`
-	}
+	claims := Claims{}
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
 	}
@@ -73,6 +70,35 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err er
 
 	return
 }
+
+type Claims struct {
+	Email    string `json:"email"`
+	Verified *bool  `json:"email_verified"`
+}
+
+func (p *OIDCProvider) GetEmailAddress(s *SessionState) (string, error) {
+	ctx := context.Background()
+	idToken, err := p.Verifier.Verify(ctx, s.IdToken)
+
+	//var claims struct {
+	//	Email    string `json:"email"`
+	//	Verified *bool  `json:"email_verified"`
+	//}
+	claims := Claims{}
+	err = idToken.Claims(&claims)
+	return claims.Email, err
+}
+
+//func (p *OIDCProvider) GetUserName(s *SessionState) (string, error) {
+//	ctx := context.Background()
+//	idToken, err := p.Verifier.Verify(ctx, s.IdToken)
+//
+//	var claims struct {
+//		Name    string `json:"name"`
+//	}
+//	err = idToken.Claims(&claims)
+//	return claims.Name, err
+//}
 
 func (p *OIDCProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {

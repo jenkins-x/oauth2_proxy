@@ -89,6 +89,10 @@ func emailFromIdToken(idToken string) (string, error) {
 	return email.Email, nil
 }
 
+func (p *GoogleProvider) GetEmailAddress(s *SessionState) (string, error) {
+	return emailFromIdToken(s.IdToken)
+}
+
 func (p *GoogleProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")

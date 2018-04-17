@@ -706,6 +706,17 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		saveSession = true
 	}
 
+	authHeader := req.Header.Get("Authorization")
+	if authHeader != "" {
+		log.Printf("Authorization header: %s,", authHeader)
+		session = &providers.SessionState{IdToken: authHeader[7:]}
+		// Strip of the 'Bearer ' section of the header
+		session.Email, err = p.provider.GetEmailAddress(session)
+		session.User, err = p.provider.GetUserName(session)
+		log.Printf("User Session from Bearer Token: %s%", session)
+	}
+
+
 	if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
 		log.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
 		clearSession = true
