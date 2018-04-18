@@ -682,14 +682,18 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	if status == http.StatusInternalServerError {
 		p.ErrorPage(rw, http.StatusInternalServerError,
 			"Internal Error", "Internal Error")
-	} else if status == http.StatusForbidden {
+	} else if status == http.StatusUnauthorized{
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
-			p.SignInPage(rw, req, http.StatusForbidden)
+			p.SignInPage(rw, req, http.StatusUnauthorized)
 		}
 	} else {
-		p.serveMux.ServeHTTP(rw, req)
+		if status > 399 {
+			p.ErrorPage(rw, status, "Authentication Failed", "Authentication Failed")
+		} else {
+			p.serveMux.ServeHTTP(rw, req)
+		}
 	}
 }
 
@@ -699,7 +703,11 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 
 	authHeader := req.Header.Get("Authorization")
 	if authHeader != "" {
-		session = AuthenticateViaAuthorizationHeader(authHeader, p.provider)
+		var err error
+		session, err = AuthenticateViaAuthorizationHeader(authHeader, p.provider)
+		if err != nil {
+			return http.StatusForbidden
+		}
 	} else {
 		var statusCode int
 		session, statusCode = AuthenticateViaLogin(p, req, remoteAddr, rw)
@@ -806,23 +814,27 @@ func AuthenticateViaLogin(p *OAuthProxy, req *http.Request, remoteAddr string, r
 	}
 
 	if session == nil {
-		statusCode = http.StatusForbidden
+		statusCode = http.StatusUnauthorized
 	}
 
 	return session, statusCode
 }
 
-func AuthenticateViaAuthorizationHeader(authHeader string, provider providers.Provider) (*providers.SessionState) {
+func AuthenticateViaAuthorizationHeader(authHeader string, provider providers.Provider) (*providers.SessionState, error) {
 	log.Printf("Authorization header: %s,", authHeader)
+	var err error
 	session := &providers.SessionState{IdToken: authHeader[7:]}
 	// Strip of the 'Bearer ' section of the header
-	session.Email, _ = provider.GetEmailAddress(session)
+	session.Email, err = provider.GetEmailAddress(session)
+	if err != nil {
+		return session, err
+	}
 	session.User, _ = provider.GetUserName(session)
 	if session.User == "" && session.Email != "" {
 		session.User = strings.Split(session.Email, "@")[0]
 	}
 	log.Printf("User Session from Bearer Token: %s%", session)
-	return session
+	return session, nil
 }
 
 func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState, error) {
