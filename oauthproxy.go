@@ -702,9 +702,9 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	remoteAddr := getRemoteAddr(req)
 
 	authHeader := req.Header.Get("Authorization")
-	if authHeader != "" {
+	if strings.Contains(strings.ToLower(authHeader), "bearer") {
 		var err error
-		session, err = AuthenticateViaAuthorizationHeader(authHeader, p.provider)
+		session, err = AuthenticateViaBearerToken(authHeader, p.provider)
 		if err != nil {
 			return http.StatusForbidden
 		}
@@ -820,7 +820,7 @@ func AuthenticateViaLogin(p *OAuthProxy, req *http.Request, remoteAddr string, r
 	return session, statusCode
 }
 
-func AuthenticateViaAuthorizationHeader(authHeader string, provider providers.Provider) (*providers.SessionState, error) {
+func AuthenticateViaBearerToken(authHeader string, provider providers.Provider) (*providers.SessionState, error) {
 	log.Printf("Authorization header: %s,", authHeader)
 	var err error
 	session := &providers.SessionState{IdToken: authHeader[7:]}
