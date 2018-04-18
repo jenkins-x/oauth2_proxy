@@ -85,7 +85,9 @@ func (p *OIDCProvider) GetEmailAddress(s *SessionState) (string, error) {
 	//	Verified *bool  `json:"email_verified"`
 	//}
 	claims := Claims{}
-	err = idToken.Claims(&claims)
+	if err == nil {
+		err = idToken.Claims(&claims)
+	}
 	return claims.Email, err
 }
 
