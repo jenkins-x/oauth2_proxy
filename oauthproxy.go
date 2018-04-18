@@ -694,82 +694,19 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int {
-	var saveSession, clearSession, revalidated bool
+	var session *providers.SessionState
 	remoteAddr := getRemoteAddr(req)
-
-	session, sessionAge, err := p.LoadCookiedSession(req)
-	if err != nil {
-		log.Printf("%s %s", remoteAddr, err)
-	}
-	if session != nil && sessionAge > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
-		log.Printf("%s refreshing %s old session cookie for %s (refresh after %s)", remoteAddr, sessionAge, session, p.CookieRefresh)
-		saveSession = true
-	}
 
 	authHeader := req.Header.Get("Authorization")
 	if authHeader != "" {
-		log.Printf("Authorization header: %s,", authHeader)
-		session = &providers.SessionState{IdToken: authHeader[7:]}
-		// Strip of the 'Bearer ' section of the header
-		session.Email, err = p.provider.GetEmailAddress(session)
-		session.User, err = p.provider.GetUserName(session)
-		log.Printf("User Session from Bearer Token: %s%", session)
-	}
+		session = AuthenticateViaAuthorizationHeader(authHeader, p.provider)
+	} else {
+		var statusCode int
+		session, statusCode = AuthenticateViaLogin(p, req, remoteAddr, rw)
 
-
-	if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
-		log.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
-		clearSession = true
-		session = nil
-	} else if ok {
-		saveSession = true
-		revalidated = true
-	}
-
-	if session != nil && session.IsExpired() {
-		log.Printf("%s removing session. token expired %s", remoteAddr, session)
-		session = nil
-		saveSession = false
-		clearSession = true
-	}
-
-	if saveSession && !revalidated && session != nil && session.AccessToken != "" {
-		if !p.provider.ValidateSessionState(session) {
-			log.Printf("%s removing session. error validating %s", remoteAddr, session)
-			saveSession = false
-			session = nil
-			clearSession = true
+		if statusCode != 0 {
+			return statusCode // early return due to unauthenticated
 		}
-	}
-
-	if session != nil && session.Email != "" && !p.Validator(session.Email) {
-		log.Printf("%s Permission Denied: removing session %s", remoteAddr, session)
-		session = nil
-		saveSession = false
-		clearSession = true
-	}
-
-	if saveSession && session != nil {
-		err := p.SaveSession(rw, req, session)
-		if err != nil {
-			log.Printf("%s %s", remoteAddr, err)
-			return http.StatusInternalServerError
-		}
-	}
-
-	if clearSession {
-		p.ClearSessionCookie(rw, req)
-	}
-
-	if session == nil {
-		session, err = p.CheckBasicAuth(req)
-		if err != nil {
-			log.Printf("%s %s", remoteAddr, err)
-		}
-	}
-
-	if session == nil {
-		return http.StatusForbidden
 	}
 
 	// At this point, the user is authenticated. proxy normally
@@ -807,6 +744,82 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		rw.Header().Set("GAP-Auth", session.Email)
 	}
 	return http.StatusAccepted
+}
+
+func AuthenticateViaLogin(p *OAuthProxy, req *http.Request, remoteAddr string, rw http.ResponseWriter) (*providers.SessionState, int) {
+	session, sessionAge, err := p.LoadCookiedSession(req)
+	var saveSession, clearSession, revalidated bool
+	if err != nil {
+		log.Printf("%s %s", remoteAddr, err)
+	}
+	if session != nil && sessionAge > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
+		log.Printf("%s refreshing %s old session cookie for %s (refresh after %s)", remoteAddr, sessionAge, session, p.CookieRefresh)
+		saveSession = true
+	}
+	if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
+		log.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
+		clearSession = true
+		session = nil
+	} else if ok {
+		saveSession = true
+		revalidated = true
+	}
+	if session != nil && session.IsExpired() {
+		log.Printf("%s removing session. token expired %s", remoteAddr, session)
+		session = nil
+		saveSession = false
+		clearSession = true
+	}
+	if saveSession && !revalidated && session != nil && session.AccessToken != "" {
+		if !p.provider.ValidateSessionState(session) {
+			log.Printf("%s removing session. error validating %s", remoteAddr, session)
+			saveSession = false
+			session = nil
+			clearSession = true
+		}
+	}
+	if session != nil && session.Email != "" && !p.Validator(session.Email) {
+		log.Printf("%s Permission Denied: removing session %s", remoteAddr, session)
+		session = nil
+		saveSession = false
+		clearSession = true
+	}
+
+	var statusCode int
+	if saveSession && session != nil {
+		err := p.SaveSession(rw, req, session)
+		if err != nil {
+			log.Printf("%s %s", remoteAddr, err)
+			statusCode = http.StatusInternalServerError
+		}
+	}
+
+	if clearSession {
+		p.ClearSessionCookie(rw, req)
+	}
+
+	if session == nil {
+		session, err = p.CheckBasicAuth(req)
+		if err != nil {
+			log.Printf("%s %s", remoteAddr, err)
+		}
+	}
+
+	if session == nil {
+		statusCode = http.StatusForbidden
+	}
+
+	return session, statusCode
+}
+
+func AuthenticateViaAuthorizationHeader(authHeader string, provider providers.Provider) (*providers.SessionState) {
+	log.Printf("Authorization header: %s,", authHeader)
+	session := &providers.SessionState{IdToken: authHeader[7:]}
+	// Strip of the 'Bearer ' section of the header
+	session.Email, _ = provider.GetEmailAddress(session)
+	session.User, _ = provider.GetUserName(session)
+	log.Printf("User Session from Bearer Token: %s%", session)
+	return session
 }
 
 func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState, error) {
