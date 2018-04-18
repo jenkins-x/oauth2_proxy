@@ -818,6 +818,9 @@ func AuthenticateViaAuthorizationHeader(authHeader string, provider providers.Pr
 	// Strip of the 'Bearer ' section of the header
 	session.Email, _ = provider.GetEmailAddress(session)
 	session.User, _ = provider.GetUserName(session)
+	if session.User == "" && session.Email != "" {
+		session.User = strings.Split(session.Email, "@")[0]
+	}
 	log.Printf("User Session from Bearer Token: %s%", session)
 	return session
 }
