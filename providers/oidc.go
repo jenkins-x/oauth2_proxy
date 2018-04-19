@@ -91,17 +91,6 @@ func (p *OIDCProvider) GetEmailAddress(s *SessionState) (string, error) {
 	return claims.Email, err
 }
 
-//func (p *OIDCProvider) GetUserName(s *SessionState) (string, error) {
-//	ctx := context.Background()
-//	idToken, err := p.Verifier.Verify(ctx, s.IdToken)
-//
-//	var claims struct {
-//		Name    string `json:"name"`
-//	}
-//	err = idToken.Claims(&claims)
-//	return claims.Name, err
-//}
-
 func (p *OIDCProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
