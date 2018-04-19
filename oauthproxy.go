@@ -833,7 +833,7 @@ func AuthenticateViaBearerToken(authHeader string, provider providers.Provider) 
 	if session.User == "" && session.Email != "" {
 		session.User = strings.Split(session.Email, "@")[0]
 	}
-	log.Printf("User Session from Bearer Token: %s%", session)
+	log.Printf("User Session from Bearer Token: %s", session)
 	return session, nil
 }
 
