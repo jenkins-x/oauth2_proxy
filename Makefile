@@ -30,13 +30,11 @@ release: bootstrap
 		export GOOS=linux; export GOARCH=amd64; export CGO_ENABLED=0; $(BUILD_CMD) & \
 		wait \
 	'
-	touch release
 
 image: 
 	@echo "Building the Docker image..."
 	docker build -t $(IMAGE_REPO)/$(BIN):$(VERSION) .
 	docker tag $(IMAGE_REPO)/$(BIN):$(VERSION) $(IMAGE_REPO)/$(BIN):latest
-	touch image
 
 image-push: image
 	docker push $(IMAGE_REPO)/$(BIN):$(VERSION)

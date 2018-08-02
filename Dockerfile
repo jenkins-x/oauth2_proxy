@@ -6,4 +6,4 @@ RUN cd /go/src/github.com/bitly/oauth2_proxy && make release && cp build/oauth2_
 
 FROM alpine:3.8
 COPY --from=0 /go/bin/oauth2_proxy /usr/local/bin/oauth2_proxy
-ENTRYPOINT ["oauth2_proxy", "-h"]
+ENTRYPOINT ["oauth2_proxy"]
