@@ -4,10 +4,6 @@
 #
 
 [[constraint]]
-  name = "github.com/18F/hmacauth"
-  version = "~1.0.1"
-
-[[constraint]]
   name = "github.com/BurntSushi/toml"
   version = "~0.3.0"
 
@@ -36,9 +32,13 @@
   name = "google.golang.org/api"
 
 [[constraint]]
-  name = "gopkg.in/fsnotify.v1"
-  version = "~1.2.0"
+  name = "gopkg.in/fsnotify/fsnotify.v1"
+  version = "v1.4.7"
 
 [[constraint]]
   branch = "master"
   name = "golang.org/x/crypto"
+
+[[constraint]]
+  name = "github.com/bitly/oauth2_proxy"
+  branch = "master"

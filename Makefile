@@ -1,32 +1,38 @@
 VERSION ?= $(shell git describe --always --tags)
 BIN = oauth2_proxy
-BUILD_CMD = go build -o build/$(BIN)-$(VERSION)-$${GOOS}-$${GOARCH} &
-IMAGE_REPO = docker.io
+BUILD_CMD = go build -o build/$(BIN)
+IMAGE_REPO = cosmincojocar
 
 default:
 	$(MAKE) bootstrap
 	$(MAKE) build
 
-test:
-	go vet ./...
-	golint -set_exit_status $(shell go list ./... | grep -v vendor)
-	go test -covermode=atomic -race -v ./...
 bootstrap:
 	dep ensure
+
 build:
 	go build -o $(BIN)
+
+test:
+	go vet ./...
+	go test -covermode=atomic -race -v ./...
+
+lint:
+	golint -set_exit_status $(shell go list ./... | grep -v vendor)
+
 clean:
 	rm -rf build vendor
 	rm -f release image bootstrap $(BIN)
+
 release: bootstrap
 	@echo "Running build command..."
-	bash -c '\
-		export GOOS=linux; export GOARCH=amd64; export CGO_ENABLED=0; $(BUILD_CMD) \
+	sh -c '\
+		export GOOS=linux; export GOARCH=amd64; export CGO_ENABLED=0; $(BUILD_CMD) & \
 		wait \
 	'
 	touch release
 
-image: release
+image: 
 	@echo "Building the Docker image..."
 	docker build -t $(IMAGE_REPO)/$(BIN):$(VERSION) .
 	docker tag $(IMAGE_REPO)/$(BIN):$(VERSION) $(IMAGE_REPO)/$(BIN):latest
