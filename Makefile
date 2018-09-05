@@ -13,7 +13,7 @@ bootstrap:
 build:
 	go build -o $(BIN)
 
-test:
+test: bootstrap
 	go vet ./...
 	go test -covermode=atomic -race -v ./...
 

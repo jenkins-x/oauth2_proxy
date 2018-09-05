@@ -370,6 +370,11 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	p.templates.ExecuteTemplate(rw, "error.html", t)
 }
 
+func (p *OAuthProxy) ErrorJson(rw http.ResponseWriter, code int) {
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(code)
+}
+
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	p.ClearSessionCookie(rw, req)
 	rw.WriteHeader(code)
@@ -602,6 +607,8 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		} else {
 			p.SignInPage(rw, req, http.StatusForbidden)
 		}
+	} else if status == http.StatusUnauthorized {
+		p.ErrorJson(rw, status)
 	} else {
 		p.serveMux.ServeHTTP(rw, req)
 	}
@@ -671,7 +678,18 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		}
 	}
 
+	// Checks if the request is an ajax request and retun unauthorized in that case
 	if session == nil {
+		acceptValues := req.Header["accept"]
+		if len(acceptValues) == 0 {
+			acceptValues = req.Header["Accept"]
+		}
+		const ajaxReq = "application/json"
+		for _, v := range acceptValues {
+			if v == ajaxReq {
+				return http.StatusUnauthorized
+			}
+		}
 		return http.StatusForbidden
 	}
 
