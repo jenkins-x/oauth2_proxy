@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --always --tags)
 BIN = oauth2_proxy
 BUILD_CMD = go build -o build/$(BIN)
-IMAGE_REPO = jenkins-x
+IMAGE_REPO = jenkinsxio
 
 default:
 	$(MAKE) bootstrap
