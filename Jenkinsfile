@@ -1,9 +1,9 @@
 pipeline {
   agent any
   environment {
-    ORG = 'jenkins-x'
-    APP_NAME = 'oauth2-proxy'
-    CHARTMUSEUM_CREDS = credentials('jenkins-x-chartmuseum')
+    ORG = 'jenkinsxio'
+    APP_NAME = 'oauth2_proxy'
+    DOCKER_REGISTRY = 'docker.io'
   }
   stages {
     stage('CI Build and push snapshot') {
