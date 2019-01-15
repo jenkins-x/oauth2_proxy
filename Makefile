@@ -2,13 +2,18 @@ VERSION ?= $(shell git describe --always --tags)
 BIN = oauth2_proxy
 BUILD_CMD = go build -o build/$(BIN)
 IMAGE_REPO = jenkinsxio
+DEP := $(GOPATH)/bin/dep
 
 default:
 	$(MAKE) bootstrap
 	$(MAKE) build
 
-bootstrap:
-	dep ensure
+$(DEP):
+	go get -u github.com/golang/dep/cmd/dep
+
+bootstrap: $(DEP)
+	@echo "INSTALLING DEPENDENCIES"
+	$(DEP) ensure 
 
 build:
 	go build -o $(BIN)
