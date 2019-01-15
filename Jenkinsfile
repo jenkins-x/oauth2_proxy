@@ -34,7 +34,7 @@ pipeline {
       }
       steps {
         dir('/home/jenkins/go/src/github.com/jenkins-x/oauth2-proxy') {
-          git 'https://github.com/jenkins-x/oauth2-proxy.git'
+          git 'https://github.com/jenkins-x/oauth2_proxy.git'
 
           // so we can retrieve the version in later steps
           sh "echo \$(jx-release-version) > VERSION"
