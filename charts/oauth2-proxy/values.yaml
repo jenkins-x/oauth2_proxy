@@ -3,8 +3,8 @@
 # Declare variables to be passed into your templates.
 replicaCount: 1
 image:
-  repository: draft
-  tag: dev
+  repository: 10.51.248.122:5000/jenkins-x/oauth2-proxy
+  tag: 2.3.7
   pullPolicy: IfNotPresent
 service:
   name: oauth2-proxy
