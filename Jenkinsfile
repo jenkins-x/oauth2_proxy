@@ -45,21 +45,5 @@ pipeline {
         }
       }
     }
-    stage('Promote to Environments') {
-      when {
-        branch 'master'
-      }
-      steps {
-        dir('/home/jenkins/go/src/github.com/jenkins-x/oauth2-proxy/charts/oauth2-proxy') {
-          sh "jx step changelog --version v\$(cat ../../VERSION)"
-
-          // release the helm chart
-          sh "jx step helm release"
-
-          // promote through all 'Auto' promotion Environments
-          sh "jx promote -b --all-auto --timeout 1h --version \$(cat ../../VERSION)"
-        }
-      }
-    }
   }
 }
